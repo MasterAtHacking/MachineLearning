@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trainable Waste Classifier AI</title>
+    <script src="https://unpkg.com"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background: #121214; color: #e1e1e6; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; background: #1a1a1e; padding: 25px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        video { width: 100%; max-width: 400px; height: auto; transform: scaleX(-1); background: #000; border-radius: 8px; border: 2px solid #323238; }
+        #prompt-box { background: #202024; border-left: 5px solid #00b37e; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 1.1rem; font-weight: bold; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        button { color: #fff; border: none; padding: 14px 20px; font-size: 1rem; font-weight: bold; border-radius: 6px; cursor: pointer; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        button:disabled { background: #323238 !important; color: #7c7c8a; cursor: not-allowed; }
+        #btn-recycling { background: #00b37e; }
+        #btn-landfill { background: #ef4444; }
+        #btn-greenery { background: #eab308; }
+        #btn-hazardous { background: #a855f7; }
+        #train-btn { background: #2563eb; width: 100%; margin-top: 15px; padding: 16px; font-size: 1.1rem; }
+        .stats { display: flex; justify-content: space-around; background: #202024; padding: 12px; border-radius: 6px; margin: 20px 0; font-size: 0.95rem; }
+        #prediction-box { font-size: 1.6rem; color: #ffbc42; margin-top: 20px; font-weight: bold; min-height: 40px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>♻️ Trainable Waste Classifier AI</h2>
+    <p>Capture at least 15–20 snapshots per category, then trigger the brain compiler loop.</p>
+    
+    <video id="webcam" autoplay playsinline muted></video>
+    
+    <div id="prompt-box">Hold up an object and tap its category repeatedly while moving it slightly!</div>
+
+    <div class="btn-grid">
+        <button id="btn-recycling" onclick="capture('Recycling')" disabled>+ Add Recycling</button>
+        <button id="btn-landfill" onclick="capture('Landfill')" disabled>+ Add Landfill</button>
+        <button id="btn-greenery" onclick="capture('Greenery')" disabled>+ Add Greenery</button>
+        <button id="btn-hazardous" onclick="capture('Hazardous')" disabled>+ Add Hazardous</button>
+    </div>
+
+    <div class="stats">
+        <div>♻️ Recycling: <span id="count-Recycling">0</span></div>
+        <div>📦 Landfill: <span id="count-Landfill">0</span></div>
+        <div>🌿 Greenery: <span id="count-Greenery">0</span></div>
+        <div>⚠️ Hazardous: <span id="count-Hazardous">0</span></div>
+    </div>
+
+    <button id="train-btn" onclick="startTraining()" disabled>Train Model (Need 10+ samples per item)</button>
+
+    <div id="prediction-box"></div>
+</div>
+
+<script>
+let videoElement = document.getElementById('webcam');
+let promptBox = document.getElementById('prompt-box');
+let trainBtn = document.getElementById('train-btn');
+
+let featureExtractor;
+let classifier;
+let counts = { "Landfill": 0, "Recycling": 0, "Greenery": 0, "Hazardous": 0 };
+let isLive = false;
+
+async function initCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        videoElement.srcObject = stream;
+        initML();
+    } catch (err) {
+        promptBox.innerHTML = "<span style='color:#f75a68;'>Error: Camera Access Blocked. Try running on a secure domain connection.</span>";
+    }
+}
+
+function initML() {
+    featureExtractor = ml5.featureExtractor('MobileNet', () => {
+        classifier = featureExtractor.classification(videoElement);
+        promptBox.innerText = "🌟 Ready to train! Hold up a clean can and click '+ Add Recycling' 15-20 times.";
+        toggleButtons(false);
+    });
+}
+
+function capture(label) {
+    if(isLive) return;
+    
+    // Core engine memory frame injection layer
+    classifier.addImage(label);
+    counts[label]++;
+    document.getElementById(`count-${label}`).innerText = counts[label];
+    
+    // Check if total threshold requirements pass validation tests
+    let ready = Object.values(counts).every(c => c >= 10);
+    if(ready) {
+        trainBtn.disabled = false;
+        trainBtn.innerText = "⚡ Compile Neural Network Stack Now";
+    } else {
+        promptBox.innerText = `Captured ${label}. Keep going! Try to hit at least 15 snapshots for all categories.`;
+    }
+}
+
+function startTraining() {
+    toggleButtons(true);
+    trainBtn.disabled = true;
+    promptBox.innerText = "Running Local Gradient Descent Optimization Math Loops...";
+    
+    // Run core engine weights synthesis loop iteration adjustments
+    classifier.train(whileTraining);
+}
+
+function whileTraining(loss) {
+    if (loss === null) {
+        promptBox.innerText = "✅ Network Calibration Complete! Running live analytics tracking...";
+        trainBtn.style.display = "none";
+        isLive = true;
+        classifier.classify(gotResults);
+    } else {
+        promptBox.innerText = `Loss Optimisation Target: ${loss.toFixed(4)}`;
+    }
+}
+
+function gotResults(err, results) {
+    if (err) return;
+    if (results && results.length > 0) {
+        let label = results[0].label;
+        let confidence = (results[0].confidence * 100).toFixed(1);
+        document.getElementById('prediction-box').innerText = `Detected: ${label} (${confidence}%)`;
+    }
+    classifier.classify(gotResults);
+}
+
+function toggleButtons(status) {
+    document.getElementById('btn-recycling').disabled = status;
+    document.getElementById('btn-landfill').disabled = status;
+    document.getElementById('btn-greenery').disabled = status;
+    document.getElementById('btn-hazardous').disabled = status;
+}
+
+window.addEventListener('DOMContentLoaded', initCamera);
+</script>
+</body>
+</html>
